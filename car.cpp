@@ -1,7 +1,7 @@
 ///////////////////////////////////////
 // RBE 550
 // Project 4
-// Authors: Luis Alzamora, 
+// Authors: FILL ME OUT!!
 //////////////////////////////////////
 
 #include <iostream>
@@ -151,32 +151,35 @@ ompl::control::SimpleSetupPtr createCar(std::vector<Rectangle> &obstacles)
     return ss;
 }
 
-void planCar(ompl::control::SimpleSetupPtr &ss, int choice)
+void planCar(ompl::control::SimpleSetupPtr &ss, int choice, double timeout)
 {
     // Set planner based on choice
+    std::string plannerName;
     if (choice == 1)
     {
         auto planner = std::make_shared<ompl::control::KPIECE1>(ss->getSpaceInformation());
         ss->setPlanner(planner);
-        std::cout << "Using KPIECE1 planner" << std::endl;
+        plannerName = "KPIECE1";
     }
     else if (choice == 2)
     {
         auto planner = std::make_shared<ompl::control::SST>(ss->getSpaceInformation());
         ss->setPlanner(planner);
-        std::cout << "Using SST planner" << std::endl;
+        plannerName = "SST";
     }
     else if (choice == 3)
     {
         auto planner = std::make_shared<ompl::control::AORRT>(ss->getSpaceInformation());
         ss->setPlanner(planner);
-        std::cout << "Using AO-RRT planner" << std::endl;
+        plannerName = "AO-RRT";
     }
+    
+    std::cout << "Using " << plannerName << " planner" << std::endl;
     
     ss->setup();
     
-    std::cout << "Planning for 200 seconds..." << std::endl;
-    ompl::base::PlannerStatus solved = ss->solve(200.0);
+    std::cout << "Planning for " << timeout << " seconds..." << std::endl;
+    ompl::base::PlannerStatus solved = ss->solve(timeout);
     
     if (solved)
     {
@@ -191,12 +194,14 @@ void planCar(ompl::control::SimpleSetupPtr &ss, int choice)
         ompl::geometric::PathGeometric gpath = path.asGeometric();
         gpath.interpolate();
         
-        // Save to file
-        std::ofstream fout("car_path.txt");
+        // Save to file with planner and timeout in filename
+        std::string filename = "car_path_" + plannerName + "_" + std::to_string((int)timeout) + "s.txt";
+        std::ofstream fout(filename);
         gpath.printAsMatrix(fout);
         fout.close();
         
-        std::cout << "Path saved to car_path.txt with " << gpath.getStateCount() << " waypoints" << std::endl;
+        std::cout << "Path saved to " << filename << " with " << gpath.getStateCount() << " waypoints" << std::endl;
+        std::cout << "Visualize with: python3 ../visualize_car.py " << filename << " " << plannerName << " " << (int)timeout << std::endl;
     }
     else
     {
@@ -262,7 +267,20 @@ int main(int /* argc */, char ** /* argv */)
             std::cin >> planner;
         } while (planner < 1 || planner > 3);
 
-        planCar(ss, planner);
+        int timeoutChoice;
+        do
+        {
+            std::cout << "Timeout? " << std::endl;
+            std::cout << " (1)  5 seconds " << std::endl;
+            std::cout << " (2) 1000 seconds " << std::endl;
+
+            std::cin >> timeoutChoice;
+        } while (timeoutChoice < 1 || timeoutChoice > 2);
+
+        double timeouts[] = {5.0, 1000.0};
+        double timeout = timeouts[timeoutChoice - 1];
+
+        planCar(ss, planner, timeout);
     }
     // Benchmarking
     else if (choice == 2)
