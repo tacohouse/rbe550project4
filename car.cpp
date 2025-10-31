@@ -1,11 +1,12 @@
 ///////////////////////////////////////
 // RBE 550
 // Project 4
-// Authors: FILL ME OUT!!
+// Authors: Luis Alzamora Josh Ethan
 //////////////////////////////////////
 
 #include <iostream>
 #include <fstream>
+#include <chrono>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/base/ProjectionEvaluator.h>
 #include <ompl/control/spaces/RealVectorControlSpace.h>
@@ -14,11 +15,7 @@
 #include <ompl/control/planners/kpiece/KPIECE1.h>
 #include <ompl/control/planners/sst/SST.h>
 #include <ompl/tools/benchmark/Benchmark.h>
-
-// The collision checker produced in project 2
 #include "CollisionChecking.h"
-
-// Your implementation of AO-RRT
 #include "AO-RRT.h"
 
 // Your projection for the car
@@ -81,10 +78,13 @@ ompl::control::SimpleSetupPtr createCar(std::vector<Rectangle> &obstacles)
     ompl::base::RealVectorBounds bounds(4);
     bounds.setLow(0, -10);   // x
     bounds.setHigh(0, 10);
+
     bounds.setLow(1, -10);   // y
     bounds.setHigh(1, 10);
+
     bounds.setLow(2, -M_PI); // theta
     bounds.setHigh(2, M_PI);
+    
     bounds.setLow(3, -1);    // v
     bounds.setHigh(3, 1);
     
@@ -211,29 +211,69 @@ void planCar(ompl::control::SimpleSetupPtr &ss, int choice, double timeout)
 
 void benchmarkCar(ompl::control::SimpleSetupPtr &ss)
 {
-    ompl::tools::Benchmark b(*ss, "Car Benchmark");
+    // Manual CSV-based benchmarking (OMPL 1.6.0 database is broken)
+    std::vector<std::string> plannerNames = {"KPIECE1", "SST", "AO-RRT"};
+    const int numRuns = 20; // 20
     
-    // Add planners
-    b.addPlanner(std::make_shared<ompl::control::KPIECE1>(ss->getSpaceInformation()));
-    b.addPlanner(std::make_shared<ompl::control::SST>(ss->getSpaceInformation()));
-    b.addPlanner(std::make_shared<ompl::control::AORRT>(ss->getSpaceInformation()));
+    std::ofstream csv("benchmark_car_results.csv");
+    csv << "Planner,Run,Time,Solved,PathLength,NumStates\n";
     
-    // Benchmark parameters
-    ompl::tools::Benchmark::Request req;
-    req.maxTime = 200.0;
-    req.maxMem = 1000.0;
-    req.runCount = 20;
-    req.displayProgress = true;
+    std::cout << "\nBenchmark summary:" << std::endl;
+    std::cout << "  - planners: (KPIECE1, SST, AO-RRT)" << std::endl;
+    std::cout << "  - " << numRuns << " runs per planner" << std::endl;
+    std::cout << "  - 200 seconds limit per run" << std::endl;
+    std::cout << "  - Total: " << (3 * numRuns) << " runs\n" << std::endl;
     
-    std::cout << "\nRunning benchmark with:" << std::endl;
-    std::cout << "  - 3 planners (KPIECE1, SST, AO-RRT)" << std::endl;
-    std::cout << "  - 20 runs per planner" << std::endl;
-    std::cout << "  - 200 seconds per run" << std::endl;
+    for (const auto& plannerName : plannerNames)
+    {
+        std::cout << "\nBenchmarking " << plannerName << "..." << std::endl;
+        
+        for (int run = 0; run < numRuns; ++run)
+        {
+            // Create fresh setup for each run
+            ss->clear();
+            
+            // Set planner
+            if (plannerName == "KPIECE1")
+                ss->setPlanner(std::make_shared<ompl::control::KPIECE1>(ss->getSpaceInformation()));
+            else if (plannerName == "SST")
+                ss->setPlanner(std::make_shared<ompl::control::SST>(ss->getSpaceInformation()));
+            else if (plannerName == "AO-RRT")
+                ss->setPlanner(std::make_shared<ompl::control::AORRT>(ss->getSpaceInformation()));
+            
+            ss->setup();
+            
+            // Time the solve
+            auto start = std::chrono::high_resolution_clock::now();
+            ompl::base::PlannerStatus solved = ss->solve(200.0);
+            auto end = std::chrono::high_resolution_clock::now();
+            
+            double elapsed = std::chrono::duration<double>(end - start).count();
+            
+            // Get path info
+            double pathLength = 0;
+            int numStates = 0;
+            if (solved)
+            {
+                ompl::control::PathControl path = ss->getSolutionPath();
+                pathLength = path.length();
+                numStates = path.getStateCount();
+            }
+            
+            // Write to CSV
+            csv << plannerName << "," << (run + 1) << "," << elapsed << "," 
+                << (solved ? 1 : 0) << "," << pathLength << "," << numStates << "\n";
+            csv.flush();
+            
+            std::cout << "  Run " << (run + 1) << "/" << numRuns 
+                     << ": " << (solved ? "yes" : "no") 
+                     << " (" << elapsed << "s)" << std::endl;
+        }
+    }
     
-    b.benchmark(req);
-    b.saveResultsToFile("benchmark_car.db");
-    
-    std::cout << "\nBenchmark results saved to benchmark_car.db" << std::endl;
+    csv.close();
+    std::cout << "\nBenchmark complete! Results saved to benchmark_car_results.csv" << std::endl;
+    std::cout << "Analyze with: python3 ../analyze_benchmark_csv.py benchmark_car_results.csv car" << std::endl;
 }
 
 int main(int /* argc */, char ** /* argv */)
@@ -271,8 +311,8 @@ int main(int /* argc */, char ** /* argv */)
         do
         {
             std::cout << "Timeout? " << std::endl;
-            std::cout << " (1)  5 seconds " << std::endl;
-            std::cout << " (2) 1000 seconds " << std::endl;
+            std::cout << " (1)  5 seconds (quick test)" << std::endl;
+            std::cout << " (2) 1000 seconds (long)" << std::endl;
 
             std::cin >> timeoutChoice;
         } while (timeoutChoice < 1 || timeoutChoice > 2);

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-Pendulum Path Visualizer for RBE 550 Project 4
-Visualizes solution paths in the (theta, omega) phase space
+///////////////////////////////////////
+// RBE 550
+// Project 4
+// Authors: Luis Alzamora Josh Ethan
+//////////////////////////////////////
 """
 
 import numpy as np

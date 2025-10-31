@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-Car Path Visualizer for RBE 550 Project 4
-Visualizes car solution paths with street obstacles
+///////////////////////////////////////
+// RBE 550
+// Project 4
+// Authors: Luis Alzamora Josh Ethan
+//////////////////////////////////////
 """
 
 import numpy as np

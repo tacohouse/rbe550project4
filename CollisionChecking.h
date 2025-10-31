@@ -1,7 +1,7 @@
 ///////////////////////////////////////
 // RBE 550
 // Project 4
-// Authors: FILL ME OUT!!
+// Authors: Luis Alzamora Josh Ethan
 //////////////////////////////////////
 
 #ifndef COLLISION_CHECKING_H

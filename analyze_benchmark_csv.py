@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
-Analyze benchmark results from CSV file
-For RBE 550 Project 4 - Pendulum Benchmarking
-No external dependencies - uses only standard library
+///////////////////////////////////////
+// RBE 550
+// Project 4
+// Authors: Luis Alzamora Josh Ethan
+//////////////////////////////////////
 """
 
 import csv
